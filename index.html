@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1A1A1A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kodex">
+<title>Kodex</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Crimson+Pro:ital,wght@0,400;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --ink:#1A1A1A; --cream:#F5F0E8; --gold:#C9A84C; --gold-dim:#8A6E2A;
+  --moss:#4A5E3A; --rust:#C0473B; --paper:#FDFAF4; --paper2:#F0EBE0;
+  --border:rgba(26,26,26,0.12); --border-strong:rgba(26,26,26,0.22);
+  --muted:#7A7468; --dim:#A09890; --r:14px; --rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--ink);font-family:'DM Sans',sans-serif;color:var(--ink)}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;background:var(--paper);overflow:hidden}
+.sbar{background:var(--ink);padding:10px 20px 8px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:100}
+.sbar span{font-size:12px;color:rgba(245,240,232,0.6)}
+.sbar .logo{font-family:'Playfair Display',serif;color:var(--cream);font-size:14px;letter-spacing:.06em}
+#scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+#scroll::-webkit-scrollbar{display:none}
+.page{display:none;min-height:100%;padding-bottom:20px}
+.page.active{display:block}
+#bnav{flex-shrink:0;display:flex;background:var(--paper);border-top:.5px solid var(--border);padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));z-index:200}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:2px 0;user-select:none}
+.ni .ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;transition:background .15s,transform .1s}
+.ni.active .ico{background:var(--ink)}
+.ni:active .ico{transform:scale(.88)}
+.ni .lbl{font-size:10px;color:var(--muted);letter-spacing:.03em}
+.ni.active .lbl{color:var(--gold);font-weight:500}
+.ph{background:var(--ink);padding:20px 20px 18px;color:var(--cream)}
+.ph .ey{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:4px;font-weight:500}
+.ph h2{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--cream)}
+.ph .sub{font-size:12px;color:rgba(245,240,232,0.45);margin-top:3px}
+.sl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;padding:16px 20px 8px}
+.card{background:var(--paper);border:.5px solid var(--border);border-radius:var(--r);padding:14px 16px;margin:0 16px 10px;cursor:pointer}
+.card:active{background:var(--paper2)}
+.mbox{background:var(--paper2);border-radius:var(--rs);padding:12px 8px;text-align:center}
+.mbox .mv{font-size:20px;font-weight:500;font-family:'Playfair Display',serif}
+.mbox .ml{font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px 6px}
+.tbar{display:flex;border-bottom:.5px solid var(--border);background:var(--paper);position:sticky;top:0;z-index:10}
+.tab{flex:1;padding:11px 4px;font-size:11px;text-align:center;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);font-weight:500}
+.tpanel{display:none}.tpanel.active{display:block}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:500}
+.b-blue{background:#E8F0FB;color:#2A5FA8}.b-green{background:#E8F2E8;color:#2A6B2A}
+.b-amber{background:#FBF0DC;color:#8A5A0A}.b-red{background:#FBE8E8;color:#A02020}
+.prog{height:4px;background:var(--border);border-radius:2px;margin-top:10px;overflow:hidden}
+.progf{height:4px;border-radius:2px;background:var(--gold)}
+.hr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:.5px solid var(--border);cursor:pointer}
+.hr:active{background:var(--paper2)}
+.er{font-size:13px}.ed{font-size:11px;color:var(--muted);margin-top:2px}
+.ev{font-size:14px;font-weight:500;font-family:'Playfair Display',serif}
+.ok{color:var(--moss)}.warn{color:#C07A20}.bad{color:var(--rust)}
+.icard{border-radius:var(--r);padding:14px 16px;margin:0 16px 10px;cursor:pointer;border:.5px solid transparent}
+.icard.saude{background:#F0F6EE;border-color:rgba(74,94,58,.2)}
+.icard.alerta{background:#FBF3E8;border-color:rgba(192,119,32,.2)}
+.icard.info{background:#EEF2FB;border-color:rgba(42,95,168,.2)}
+.icard.dark{background:var(--ink)}
+.ict{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:500;margin-bottom:6px}
+.icard.saude .ict{color:var(--moss)}.icard.alerta .ict{color:#8A5A0A}
+.icard.info .ict{color:#2A5FA8}.icard.dark .ict{color:var(--gold)}
+.itx{font-size:13px;line-height:1.55}
+.icard.dark .itx{color:var(--cream)}.icard.saude .itx,.icard.alerta .itx,.icard.info .itx{color:var(--ink)}
+.iact{font-size:11px;margin-top:8px;font-weight:500}
+.icard.saude .iact{color:var(--moss)}.icard.alerta .iact{color:#8A5A0A}
+.icard.info .iact{color:#2A5FA8}.icard.dark .iact{color:var(--gold)}
+.wstrip{display:flex;gap:4px;padding:10px 16px 8px;background:var(--paper2)}
+.dp{flex:1;text-align:center;padding:8px 2px;border-radius:var(--rs);cursor:pointer}
+.dp.today{background:var(--ink);color:var(--cream)}
+.dp .dl{font-size:9px;opacity:.6;text-transform:uppercase}
+.dp .dn{font-size:15px;font-weight:500}
+.dp:not(.today) .dl{color:var(--muted)}.dp:not(.today) .dn{color:var(--ink)}
+.ti{display:flex;align-items:flex-start;gap:12px;padding:13px 20px;border-bottom:.5px solid var(--border);cursor:pointer}
+.ti:active{background:var(--paper2)}
+.tt{font-size:11px;color:var(--muted);min-width:38px;padding-top:2px}
+.tdot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.tn{font-size:14px}.ts2{font-size:11px;color:var(--muted);margin-top:2px}
+.bcard{display:flex;gap:14px;border:.5px solid var(--border);border-radius:var(--r);padding:14px;margin:0 16px 10px;cursor:pointer;background:var(--paper)}
+.bcard:active{background:var(--paper2)}
+.bspine{width:44px;height:60px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--cream);flex-shrink:0}
+.stoic{margin:14px 16px 0;background:var(--ink);border-radius:var(--r);padding:16px}
+.stoic .ey{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);font-weight:500;margin-bottom:8px}
+.stoic .q{font-family:'Crimson Pro',serif;font-size:15px;color:var(--cream);line-height:1.6;font-style:italic}
+.stoic .a{font-size:11px;color:rgba(245,240,232,.4);margin-top:8px}
+.qgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.qcard{border:.5px solid var(--border);border-radius:var(--r);padding:16px 14px;cursor:pointer;background:var(--paper)}
+.qcard:active{background:var(--paper2)}
+.qe{font-size:22px;margin-bottom:10px}
+.ql{font-size:13px;font-weight:500}.qs{font-size:11px;color:var(--muted);margin-top:3px}
+.hrow{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:.5px solid var(--border);cursor:pointer}
+.hrow:active{background:var(--paper2)}
+.hchk{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s;flex-shrink:0}
+.hchk.done{background:var(--moss);border-color:var(--moss);color:white}
+.chat-msgs{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.bubble{max-width:88%;padding:11px 14px;border-radius:16px;font-size:13px;line-height:1.55}
+.bubble.ai{background:var(--paper2);color:var(--ink);align-self:flex-start;border-bottom-left-radius:4px;border:.5px solid var(--border);font-family:'Crimson Pro',serif;font-size:14px}
+.bubble.user{background:var(--ink);color:var(--cream);align-self:flex-end;border-bottom-right-radius:4px}
+.cinput-row{display:flex;gap:8px;padding:10px 16px 14px;border-top:.5px solid var(--border)}
+.cinput{flex:1;border:.5px solid var(--border-strong);border-radius:22px;padding:9px 16px;font-size:13px;background:var(--paper2);color:var(--ink);outline:none;font-family:'DM Sans',sans-serif}
+.cinput::placeholder{color:var(--dim)}
+.sbtn{width:36px;height:36px;border-radius:50%;background:var(--ink);border:none;cursor:pointer;color:var(--cream);font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s}
+.sbtn:active{transform:scale(.9)}
+.thinking{display:inline-flex;gap:4px;align-items:center;padding:4px 0}
+.thinking span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bounce 1.2s infinite}
+.thinking span:nth-child(2){animation-delay:.2s}.thinking span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:flex-end}
+.overlay.open{display:flex}
+.sheet{background:var(--paper);width:100%;max-width:430px;margin:0 auto;border-radius:20px 20px 0 0;padding:20px 20px 36px;animation:sup .25s ease;max-height:85vh;overflow-y:auto}
+@keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhandle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
+.mtitle{font-family:'Playfair Display',serif;font-size:18px;font-weight:500;margin-bottom:16px}
+.fg{margin-bottom:14px}
+.fl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;margin-bottom:5px;display:block}
+.fi{width:100%;border:.5px solid var(--border-strong);border-radius:var(--rs);padding:10px 12px;font-size:14px;background:var(--paper2);color:var(--ink);outline:none;font-family:'DM Sans',sans-serif}
+.fi:focus{border-color:var(--gold)}
+textarea.fi{resize:vertical;min-height:80px}
+.btnp{width:100%;background:var(--ink);color:var(--cream);border:none;border-radius:var(--rs);padding:13px;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;transition:opacity .15s}
+.btnp:active{opacity:.8}
+.btnc{width:100%;background:transparent;color:var(--muted);border:none;padding:10px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:6px}
+.btno{width:100%;background:transparent;color:var(--gold);border:.5px solid var(--gold);border-radius:var(--rs);padding:12px;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;margin-top:6px}
+/* AUTH SCREEN */
+#auth-screen{position:fixed;inset:0;background:var(--ink);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px}
+.auth-logo{font-family:'Playfair Display',serif;font-size:52px;color:var(--gold);margin-bottom:4px}
+.auth-title{font-family:'Playfair Display',serif;font-size:24px;color:var(--cream);margin-bottom:6px}
+.auth-sub{font-size:12px;color:rgba(245,240,232,.4);margin-bottom:40px;letter-spacing:.04em}
+.auth-box{width:100%;max-width:300px}
+.auth-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);font-weight:500;margin-bottom:6px;display:block}
+.auth-input{width:100%;border:.5px solid rgba(255,255,255,.15);border-radius:var(--rs);padding:12px 14px;font-size:14px;background:rgba(255,255,255,.07);color:var(--cream);outline:none;font-family:'DM Sans',sans-serif;margin-bottom:12px}
+.auth-input::placeholder{color:rgba(245,240,232,.3)}
+.auth-input:focus{border-color:var(--gold)}
+.auth-btn{width:100%;background:var(--gold);color:var(--ink);border:none;border-radius:var(--rs);padding:13px;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:600;margin-bottom:10px;transition:opacity .15s}
+.auth-btn:active{opacity:.85}
+.auth-link{background:transparent;border:none;color:rgba(245,240,232,.4);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;padding:6px;width:100%;text-align:center}
+.auth-link:hover{color:rgba(245,240,232,.7)}
+.auth-msg{font-size:12px;text-align:center;padding:8px 0;min-height:20px}
+.auth-msg.err{color:#E87070}.auth-msg.ok{color:#7EC87E}
+/* SETTINGS */
+.srow{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:.5px solid var(--border)}
+.stitle{font-size:13px;font-weight:500}
+.sdesc{font-size:11px;color:var(--muted);margin-top:2px}
+.stag{font-size:11px;color:var(--gold);background:rgba(201,168,76,.12);padding:3px 8px;border-radius:12px}
+/* TOAST */
+#toast{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--cream);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* SYNC indicator */
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--moss);display:inline-block;margin-left:6px;vertical-align:middle}
+.sync-dot.syncing{background:var(--gold);animation:pulse 1s infinite}
+.sync-dot.err{background:var(--rust)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-logo">K</div>
+  <div class="auth-title">Kodex</div>
+  <div class="auth-sub">Seu caderno de vida pessoal</div>
+  <div class="auth-box">
+    <div id="auth-form-login">
+      <label class="auth-label">Email</label>
+      <input type="email" id="auth-email" class="auth-input" placeholder="seu@email.com" autocomplete="email">
+      <label class="auth-label">Senha</label>
+      <input type="password" id="auth-password" class="auth-input" placeholder="••••••••" autocomplete="current-password">
+      <div class="auth-msg" id="auth-msg"></div>
+      <button class="auth-btn" onclick="doLogin()">Entrar →</button>
+      <button class="auth-link" onclick="toggleAuthMode()">Não tenho conta — criar agora</button>
+    </div>
+    <div id="auth-form-register" style="display:none">
+      <label class="auth-label">Email</label>
+      <input type="email" id="reg-email" class="auth-input" placeholder="seu@email.com">
+      <label class="auth-label">Senha</label>
+      <input type="password" id="reg-password" class="auth-input" placeholder="Mínimo 6 caracteres">
+      <label class="auth-label">Chave Gemini API</label>
+      <input type="text" id="reg-gemini" class="auth-input" placeholder="AIza... (gratuita em aistudio.google.com)" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="auth-msg" id="reg-msg"></div>
+      <button class="auth-btn" onclick="doRegister()">Criar conta →</button>
+      <button class="auth-link" onclick="toggleAuthMode()">← Já tenho conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="sbar">
+    <span id="stime">--:--</span>
+    <span class="logo">Kodex <span class="sync-dot" id="sync-dot"></span></span>
+    <span onclick="nav('config')" style="cursor:pointer;font-size:15px;opacity:.5">⚙</span>
+  </div>
+
+  <div id="scroll">
+
+    <!-- HOME -->
+    <div class="page active" id="page-home">
+      <div class="ph">
+        <div class="ey" id="home-greeting">Bom dia</div>
+        <h2 id="home-date">Carregando...</h2>
+        <div class="sub" id="home-sub">Semana —</div>
+      </div>
+      <div class="stoic">
+        <div class="ey">⚡ Desafio do dia</div>
+        <div class="q" id="stoic-q">Carregando...</div>
+        <div class="a" id="stoic-a"></div>
+      </div>
+      <div class="sl">Módulos</div>
+      <div class="qgrid">
+        <div class="qcard" onclick="nav('saude')"><div class="qe">💪</div><div class="ql">Saúde</div><div class="qs" id="q-saude">—</div></div>
+        <div class="qcard" onclick="nav('agenda')"><div class="qe">📅</div><div class="ql">Agenda</div><div class="qs" id="q-agenda">—</div></div>
+        <div class="qcard" onclick="nav('estudos')"><div class="qe">📚</div><div class="ql">Estudos</div><div class="qs" id="q-estudos">—</div></div>
+        <div class="qcard" onclick="nav('agente')"><div class="qe">🤖</div><div class="ql">Agente IA</div><div class="qs">Converse</div></div>
+      </div>
+      <div class="sl">Hábitos de hoje</div>
+      <div id="habits-list"></div>
+      <div style="text-align:center;padding:12px 0">
+        <button class="btno" style="width:auto;padding:9px 24px" onclick="openModal('add-habit')">+ Novo hábito</button>
+      </div>
+    </div>
+
+    <!-- SAÚDE -->
+    <div class="page" id="page-saude">
+      <div class="ph"><div class="ey">Módulo</div><h2>Saúde & Corpo</h2><div class="sub" id="saude-sub">—</div></div>
+      <div class="tbar">
+        <div class="tab active" onclick="stab('treino',this)">Treino</div>
+        <div class="tab" onclick="stab('dieta',this)">Dieta</div>
+        <div class="tab" onclick="stab('exames',this)">Exames</div>
+        <div class="tab" onclick="stab('aval',this)">Avaliação</div>
+      </div>
+      <div class="tpanel active" id="tp-treino">
+        <div class="mgrid">
+          <div class="mbox"><div class="mv" id="m-treinos">0</div><div class="ml">Treinos</div></div>
+          <div class="mbox"><div class="mv" id="m-vol">0h</div><div class="ml">Volume</div></div>
+          <div class="mbox"><div class="mv" id="m-meta">0%</div><div class="ml">Meta</div></div>
+        </div>
+        <div class="sl">Histórico</div>
+        <div id="treinos-list"></div>
+        <div style="text-align:center;padding:14px 0">
+          <button class="btnp" style="width:auto;padding:11px 32px" onclick="openModal('add-treino')">+ Registrar treino</button>
+        </div>
+      </div>
+      <div class="tpanel" id="tp-dieta">
+        <div class="mgrid">
+          <div class="mbox"><div class="mv" id="m-kcal">0</div><div class="ml">kcal</div></div>
+          <div class="mbox"><div class="mv" id="m-prot">0g</div><div class="ml">Proteína</div></div>
+          <div class="mbox"><div class="mv" id="m-agua">0L</div><div class="ml">Água</div></div>
+        </div>
+        <div class="sl">Refeições de hoje</div>
+        <div id="dieta-list"></div>
+        <div style="text-align:center;padding:14px 0">
+          <button class="btnp" style="width:auto;padding:11px 32px" onclick="openModal('add-dieta')">+ Registrar refeição</button>
+        </div>
+      </div>
+      <div class="tpanel" id="tp-exames">
+        <div id="exames-alert" style="padding:14px 16px 0"></div>
+        <div class="sl">Resultados registrados</div>
+        <div id="exames-list"></div>
+        <div style="text-align:center;padding:14px 0">
+          <button class="btnp" style="width:auto;padding:11px 32px" onclick="openModal('add-exame')">+ Adicionar resultado</button>
+        </div>
+      </div>
+      <div class="tpanel" id="tp-aval">
+        <div class="mgrid">
+          <div class="mbox"><div class="mv" id="m-peso">—</div><div class="ml">Peso kg</div></div>
+          <div class="mbox"><div class="mv" id="m-gord">—</div><div class="ml">Gordura</div></div>
+          <div class="mbox"><div class="mv" id="m-imc">—</div><div class="ml">IMC</div></div>
+        </div>
+        <div class="sl">Medidas</div>
+        <div id="aval-list"></div>
+        <div style="text-align:center;padding:14px 0">
+          <button class="btnp" style="width:auto;padding:11px 32px" onclick="openModal('add-aval')">+ Registrar avaliação</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div class="page" id="page-agenda">
+      <div class="ph"><div class="ey">Módulo</div><h2>Agenda</h2><div class="sub" id="agenda-sub">—</div></div>
+      <div class="wstrip" id="week-strip"></div>
+      <div class="sl" id="agenda-day-label">Hoje</div>
+      <div id="tasks-list"></div>
+      <div style="text-align:center;padding:14px 0">
+        <button class="btnp" style="width:auto;padding:11px 32px" onclick="openModal('add-task')">+ Adicionar tarefa</button>
+      </div>
+    </div>
+
+    <!-- ESTUDOS -->
+    <div class="page" id="page-estudos">
+      <div class="ph"><div class="ey">Módulo</div><h2>Estudos & Leitura</h2><div class="sub" id="estudos-sub">—</div></div>
+      <div class="sl">Leituras ativas</div>
+      <div id="livros-list"></div>
+      <div style="text-align:center;padding:4px 0 10px">
+        <button class="btno" style="width:auto;padding:9px 24px" onclick="openModal('add-livro')">+ Adicionar livro</button>
+      </div>
+      <div class="sl">Cursos & Formações</div>
+      <div id="cursos-list"></div>
+      <div style="text-align:center;padding:14px 0">
+        <button class="btno" style="width:auto;padding:9px 24px" onclick="openModal('add-curso')">+ Adicionar curso</button>
+      </div>
+    </div>
+
+    <!-- AGENTE IA -->
+    <div class="page" id="page-agente">
+      <div class="ph"><div class="ey">Módulo</div><h2>Agente Kodex</h2><div class="sub">Analisa seus registros e gera insights</div></div>
+      <div class="sl">Insights</div>
+      <div id="insights-list"></div>
+      <div class="sl">Conversar</div>
+      <div class="chat-msgs" id="chat-msgs">
+        <div class="bubble ai">Olá! Sou o agente Kodex. Posso analisar seus treinos, exames, estudos e rotina. O que você quer explorar?</div>
+      </div>
+      <div class="cinput-row">
+        <input class="cinput" id="chat-input" placeholder="Pergunte sobre saúde, rotina, estudos..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="sbtn" onclick="sendChat()">↑</button>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="page" id="page-config">
+      <div class="ph"><div class="ey">Sistema</div><h2>Configurações</h2><div class="sub">Conta e preferências</div></div>
+      <div class="sl">Conta</div>
+      <div class="srow"><div><div class="stitle">Email</div><div class="sdesc" id="cfg-email">—</div></div></div>
+      <div class="srow"><div><div class="stitle">Sincronização</div><div class="sdesc">Supabase · dados na nuvem</div></div><span class="stag">Ativo</span></div>
+      <div class="sl">Integração IA</div>
+      <div class="srow" onclick="openModal('cfg-gemini')" style="cursor:pointer">
+        <div><div class="stitle">Chave Gemini API</div><div class="sdesc" id="cfg-gemini-status">—</div></div>
+        <span style="color:var(--muted);font-size:18px">›</span>
+      </div>
+      <div class="sl">Dados</div>
+      <div class="srow" onclick="openModal('export-data')" style="cursor:pointer">
+        <div><div class="stitle">Exportar dados</div><div class="sdesc">JSON com todos os registros</div></div>
+        <span style="color:var(--muted);font-size:18px">›</span>
+      </div>
+      <div style="padding:20px 16px 0">
+        <button class="btnp" style="background:var(--rust)" onclick="doLogout()">Sair da conta</button>
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+
+  <nav id="bnav">
+    <div class="ni active" id="ni-home" onclick="nav('home')"><div class="ico">🏠</div><div class="lbl">Home</div></div>
+    <div class="ni" id="ni-saude" onclick="nav('saude')"><div class="ico">💪</div><div class="lbl">Saúde</div></div>
+    <div class="ni" id="ni-agenda" onclick="nav('agenda')"><div class="ico">📅</div><div class="lbl">Agenda</div></div>
+    <div class="ni" id="ni-estudos" onclick="nav('estudos')"><div class="ico">📚</div><div class="lbl">Estudos</div></div>
+    <div class="ni" id="ni-agente" onclick="nav('agente')"><div class="ico">🤖</div><div class="lbl">IA</div></div>
+  </nav>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="sheet"><div class="mhandle"></div><div id="modal-body"></div></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ============ SUPABASE ============
+const SB_URL = 'https://mcupgcomfwakkhcmtjnv.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1jdXBnY29tZndha2toY210am52Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjg4NzksImV4cCI6MjA4OTYwNDg3OX0.EigPVOYgu-vrnMk0T0xdyhPO_NkSgg2kdauSPOcn24U';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+let USER = null;
+let GEMINI_KEY = '';
+let chatHistory = [];
+let selectedDate = todayStr();
+let allData = { treinos:[], dieta:[], exames:[], avaliacoes:[], tasks:[], livros:[], cursos:[], habits:[] };
+
+// ============ INIT ============
+document.addEventListener('DOMContentLoaded', async () => {
+  updateTime(); setInterval(updateTime, 30000);
+  updateDateDisplay();
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    USER = session.user;
+    startApp();
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex';
+  }
+
+  sb.auth.onAuthStateChange((_e, session) => {
+    if (session && !USER) { USER = session.user; startApp(); }
+  });
+});
+
+async function startApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('cfg-email').textContent = USER.email;
+
+  // Load gemini key from user metadata or localStorage
+  GEMINI_KEY = USER.user_metadata?.gemini_key || localStorage.getItem('kodex_gemini_' + USER.id) || '';
+  updateGeminiStatus();
+
+  await loadAllData();
+  renderHome();
+  renderAgenda();
+  loadStoic();
+  generateInsights();
+  setupPWA();
+}
+
+// ============ AUTH ============
+function toggleAuthMode() {
+  const login = document.getElementById('auth-form-login');
+  const reg = document.getElementById('auth-form-register');
+  login.style.display = login.style.display === 'none' ? 'block' : 'none';
+  reg.style.display = reg.style.display === 'none' ? 'block' : 'none';
+}
+
+async function doLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-password').value;
+  const msg = document.getElementById('auth-msg');
+  msg.textContent = 'Entrando...'; msg.className = 'auth-msg';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { msg.textContent = error.message; msg.className = 'auth-msg err'; }
+  else { msg.textContent = ''; }
+}
+
+async function doRegister() {
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-password').value;
+  const gemini = document.getElementById('reg-gemini').value.trim();
+  const msg = document.getElementById('reg-msg');
+  msg.textContent = 'Criando conta...'; msg.className = 'auth-msg';
+  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { gemini_key: gemini } } });
+  if (error) { msg.textContent = error.message; msg.className = 'auth-msg err'; }
+  else {
+    if (gemini) localStorage.setItem('kodex_gemini_' + data.user?.id, gemini);
+    msg.textContent = 'Conta criada! Verifique seu email se necessário.'; msg.className = 'auth-msg ok';
+    setTimeout(() => toggleAuthMode(), 1500);
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  USER = null; location.reload();
+}
+
+// ============ DB HELPERS ============
+function setSyncing(s) {
+  const d = document.getElementById('sync-dot');
+  d.className = 'sync-dot' + (s === 'ok' ? '' : s === 'syncing' ? ' syncing' : ' err');
+}
+
+async function dbInsert(table, row) {
+  setSyncing('syncing');
+  const { data, error } = await sb.from(table).insert({ ...row, user_id: USER.id }).select().single();
+  setSyncing(error ? 'err' : 'ok');
+  if (error) { toast('Erro ao salvar: ' + error.message); return null; }
+  return data;
+}
+
+async function dbSelect(table, order = 'created_at') {
+  const { data, error } = await sb.from(table).select('*').eq('user_id', USER.id).order(order, { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+async function dbDelete(table, id) {
+  setSyncing('syncing');
+  const { error } = await sb.from(table).delete().eq('id', id).eq('user_id', USER.id);
+  setSyncing(error ? 'err' : 'ok');
+  if (error) toast('Erro ao deletar');
+}
+
+async function loadAllData() {
+  const [treinos, dieta, exames, avaliacoes, tasks, livros, cursos, habits] = await Promise.all([
+    dbSelect('treinos'), dbSelect('dieta'), dbSelect('exames'),
+    dbSelect('avaliacoes'), dbSelect('tasks'), dbSelect('livros'),
+    dbSelect('cursos'), dbSelect('habits')
+  ]);
+  allData = { treinos, dieta, exames, avaliacoes, tasks, livros, cursos, habits };
+}
+
+// ============ NAVIGATION ============
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const ni = document.getElementById('ni-' + page);
+  if (ni) ni.classList.add('active');
+  document.getElementById('scroll').scrollTop = 0;
+  if (page === 'saude') renderSaude();
+  if (page === 'agenda') renderAgenda();
+  if (page === 'estudos') renderEstudos();
+  if (page === 'agente') generateInsights();
+}
+
+function stab(tab, el) {
+  document.querySelectorAll('#page-saude .tpanel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#page-saude .tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tp-' + tab).classList.add('active');
+  el.classList.add('active');
+  if (tab === 'exames') renderExames();
+  if (tab === 'aval') renderAval();
+}
+
+// ============ RENDER HOME ============
+function renderHome() {
+  const habits = allData.habits;
+  const todayHabits = JSON.parse(localStorage.getItem('habits_done_' + USER.id + '_' + todayStr()) || '{}');
+  const done = habits.filter(h => todayHabits[h.id]).length;
+  const pending = habits.length - done;
+  document.getElementById('home-sub').textContent = `Semana ${weekNum()} · ${pending === 0 && habits.length > 0 ? 'Todos os hábitos completos 🎉' : pending + ' pendente' + (pending !== 1 ? 's' : '')}`;
+
+  // Quick stats
+  const todayTreinos = allData.treinos.filter(t => t.date === todayStr()).length;
+  const thisWeekTreinos = allData.treinos.filter(t => sameWeek(t.date)).length;
+  document.getElementById('q-saude').textContent = todayTreinos > 0 ? `${todayTreinos} treino hoje` : `${thisWeekTreinos} treinos esta semana`;
+
+  const todayTasks = allData.tasks.filter(t => t.date === todayStr()).length;
+  document.getElementById('q-agenda').textContent = `${todayTasks} tarefa${todayTasks !== 1 ? 's' : ''} hoje`;
+
+  const livroAtivo = allData.livros.find(l => l.pct < 100);
+  document.getElementById('q-estudos').textContent = livroAtivo ? livroAtivo.title.substring(0,16) + '…' : 'Sem leitura ativa';
+
+  // Habits
+  const list = document.getElementById('habits-list');
+  list.innerHTML = '';
+  if (habits.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhum hábito cadastrado ainda</div>';
+    return;
+  }
+  habits.forEach(h => {
+    const isDone = !!todayHabits[h.id];
+    const div = document.createElement('div');
+    div.className = 'hrow';
+    div.innerHTML = `<span style="font-size:13px">${h.emoji || '✦'} ${h.name}</span><div class="hchk ${isDone ? 'done' : ''}">${isDone ? '✓' : ''}</div>`;
+    div.onclick = () => toggleHabit(h.id, div, isDone);
+    list.appendChild(div);
+  });
+}
+
+function toggleHabit(id, div, wasDone) {
+  const key = 'habits_done_' + USER.id + '_' + todayStr();
+  const done = JSON.parse(localStorage.getItem(key) || '{}');
+  done[id] = !wasDone;
+  localStorage.setItem(key, JSON.stringify(done));
+  const chk = div.querySelector('.hchk');
+  if (!wasDone) { chk.classList.add('done'); chk.textContent = '✓'; }
+  else { chk.classList.remove('done'); chk.textContent = ''; }
+  renderHome();
+}
+
+// ============ RENDER SAÚDE ============
+function renderSaude() {
+  renderTreinos(); renderDieta();
+}
+
+function renderTreinos() {
+  const weekTreinos = allData.treinos.filter(t => sameWeek(t.date));
+  const meta = 4;
+  document.getElementById('m-treinos').textContent = weekTreinos.length;
+  const totalMin = weekTreinos.reduce((a, t) => a + (t.duration_min || 0), 0);
+  document.getElementById('m-vol').textContent = totalMin >= 60 ? Math.round(totalMin/60*10)/10 + 'h' : totalMin + 'min';
+  document.getElementById('m-meta').textContent = Math.min(100, Math.round(weekTreinos.length / meta * 100)) + '%';
+  document.getElementById('saude-sub').textContent = `${weekTreinos.length}/${meta} treinos esta semana`;
+
+  const list = document.getElementById('treinos-list');
+  list.innerHTML = '';
+  allData.treinos.slice(0, 8).forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center';
+    div.innerHTML = `<div><div style="font-size:14px;font-weight:500">${t.muscle_group}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${t.exercises || ''} · ${t.duration_min || 0} min${t.notes ? ' · ' + t.notes : ''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="badge b-blue">${fmtDate(t.date)}</span><span onclick="event.stopPropagation();delItem('treinos',t.id)" style="font-size:10px;color:var(--muted);cursor:pointer">✕</span></div>`;
+    div.querySelector('span[onclick]').onclick = (e) => { e.stopPropagation(); delItem('treinos', t.id); };
+    list.appendChild(div);
+  });
+  if (allData.treinos.length === 0) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhum treino registrado ainda</div>';
+}
+
+function renderDieta() {
+  const today = allData.dieta.filter(d => d.date === todayStr());
+  const totalKcal = today.reduce((a, d) => a + (d.kcal || 0), 0);
+  const totalProt = today.reduce((a, d) => a + (d.protein_g || 0), 0);
+  const totalAgua = today.reduce((a, d) => a + (d.water_l || 0), 0);
+  document.getElementById('m-kcal').textContent = totalKcal;
+  document.getElementById('m-prot').textContent = totalProt + 'g';
+  document.getElementById('m-agua').textContent = totalAgua.toFixed(1) + 'L';
+  const list = document.getElementById('dieta-list');
+  list.innerHTML = '';
+  today.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center';
+    div.innerHTML = `<div><div style="font-size:14px;font-weight:500">${d.meal}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${d.description || ''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="badge b-amber">${d.kcal || 0} kcal</span><span style="font-size:10px;color:var(--muted);cursor:pointer" onclick="delItem('dieta','${d.id}')">✕</span></div>`;
+    list.appendChild(div);
+  });
+  if (today.length === 0) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhuma refeição registrada hoje</div>';
+}
+
+function renderExames() {
+  const list = document.getElementById('exames-list');
+  list.innerHTML = '';
+  allData.exames.forEach(e => {
+    const monthsAgo = Math.floor((Date.now() - new Date(e.exam_date).getTime()) / (1000 * 60 * 60 * 24 * 30));
+    const isOld = monthsAgo >= 6;
+    const div = document.createElement('div');
+    div.className = 'hr';
+    div.innerHTML = `<div><div class="er">${e.name}</div><div class="ed" style="${isOld ? 'color:var(--rust)' : ''}">${fmtDateLong(e.exam_date)} · ${monthsAgo}m atrás${isOld ? ' ⚠️' : ''}</div></div><div style="display:flex;align-items:center;gap:10px"><div class="ev ${e.status === 'ok' ? 'ok' : e.status === 'warn' ? 'warn' : 'bad'}">${e.value}</div><span style="font-size:10px;color:var(--muted);cursor:pointer" onclick="delItem('exames','${e.id}')">✕</span></div>`;
+    list.appendChild(div);
+  });
+  if (allData.exames.length === 0) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhum exame registrado ainda</div>';
+
+  // Alert
+  const old = allData.exames.filter(e => {
+    const m = Math.floor((Date.now() - new Date(e.exam_date).getTime()) / (1000 * 60 * 60 * 24 * 30));
+    return m >= 6;
+  });
+  const alertEl = document.getElementById('exames-alert');
+  if (old.length > 0) {
+    alertEl.innerHTML = `<div class="icard alerta"><div class="ict">⚠️ Exames a renovar</div><div class="itx">${old.length} exame(s) com mais de 6 meses: ${old.map(e => e.name).join(', ')}. Considere agendar um checkup completo.</div><div class="iact">→ Agendar checkup</div></div>`;
+  } else { alertEl.innerHTML = ''; }
+}
+
+function renderAval() {
+  const list = document.getElementById('aval-list');
+  list.innerHTML = '';
+  const latest = allData.avaliacoes[0];
+  if (latest) {
+    document.getElementById('m-peso').textContent = latest.weight_kg || '—';
+    document.getElementById('m-gord').textContent = latest.body_fat ? latest.body_fat + '%' : '—';
+    const imc = latest.weight_kg && latest.height_cm ? (latest.weight_kg / Math.pow(latest.height_cm/100, 2)).toFixed(1) : '—';
+    document.getElementById('m-imc').textContent = imc;
+  }
+  allData.avaliacoes.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:500">${fmtDateLong(a.date)}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${a.weight_kg || '—'}kg · ${a.body_fat || '—'}% gord. · ${a.notes || ''}</div></div><span style="font-size:10px;color:var(--muted);cursor:pointer" onclick="delItem('avaliacoes','${a.id}')">✕</span></div>`;
+    list.appendChild(div);
+  });
+  if (allData.avaliacoes.length === 0) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhuma avaliação registrada ainda</div>';
+}
+
+// ============ RENDER AGENDA ============
+function renderAgenda() {
+  const now = new Date();
+  const strip = document.getElementById('week-strip');
+  strip.innerHTML = '';
+  const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  for (let i = -3; i <= 3; i++) {
+    const d = new Date(now); d.setDate(now.getDate() + i);
+    const ds = d.toISOString().split('T')[0];
+    const div = document.createElement('div');
+    div.className = 'dp' + (ds === selectedDate ? ' today' : '');
+    div.innerHTML = `<div class="dl">${days[d.getDay()]}</div><div class="dn">${d.getDate()}</div>`;
+    div.onclick = () => { selectedDate = ds; renderAgenda(); };
+    strip.appendChild(div);
+  }
+  const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const selD = new Date(selectedDate + 'T12:00:00');
+  document.getElementById('agenda-day-label').textContent = selectedDate === todayStr() ? 'Hoje' : `${days[selD.getDay()]}, ${selD.getDate()} de ${months[selD.getMonth()]}`;
+  document.getElementById('agenda-sub').textContent = `${months[now.getMonth()].charAt(0).toUpperCase() + months[now.getMonth()].slice(1)} ${now.getFullYear()}`;
+
+  const dayTasks = allData.tasks.filter(t => t.date === selectedDate).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+  const list = document.getElementById('tasks-list');
+  list.innerHTML = '';
+  const colors = { Trabalho:'var(--gold)', Saúde:'var(--moss)', Estudos:'var(--gold-dim)', Pessoal:'#2A5FA8' };
+  dayTasks.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'ti';
+    div.innerHTML = `<span class="tt">${t.time || '—'}</span><span class="tdot" style="background:${colors[t.category]||'var(--muted)'}"></span><div><div class="tn">${t.title}</div><div class="ts2">${t.category || ''}${t.duration_min ? ' · ' + t.duration_min + ' min' : ''}</div></div><span style="font-size:10px;color:var(--muted);cursor:pointer;margin-left:auto;padding-left:8px" onclick="delItem('tasks','${t.id}')">✕</span>`;
+    list.appendChild(div);
+  });
+  if (dayTasks.length === 0) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhuma tarefa para este dia</div>';
+}
+
+// ============ RENDER ESTUDOS ============
+function renderEstudos() {
+  const list = document.getElementById('livros-list');
+  list.innerHTML = '';
+  allData.livros.forEach(l => {
+    const pct = l.pct || 0;
+    const colors = ['#1A1A1A','#4A5E3A','#C0473B','#2A5FA8','#8A6E2A'];
+    const color = colors[allData.livros.indexOf(l) % colors.length];
+    const div = document.createElement('div');
+    div.className = 'bcard';
+    div.innerHTML = `<div class="bspine" style="background:${color}">${(l.title||'').substring(0,3).toUpperCase()}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${l.title}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${l.author || ''}</div><div class="prog"><div class="progf" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;margin-top:5px"><div style="font-size:10px;color:var(--muted)">${pct}% concluído</div><span style="font-size:10px;color:var(--muted);cursor:pointer" onclick="delItem('livros','${l.id}')">✕ remover</span></div></div>`;
+    list.appendChild(div);
+  });
+  if (allData.livros.length === 0) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhum livro adicionado ainda</div>';
+
+  const clist = document.getElementById('cursos-list');
+  clist.innerHTML = '';
+  allData.cursos.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'hr';
+    div.innerHTML = `<div><div style="font-size:13px;font-weight:500">${c.title}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${c.platform || ''}</div></div><div style="display:flex;align-items:center;gap:10px"><span style="font-size:14px;font-weight:500;font-family:'Playfair Display',serif;color:${c.pct >= 100 ? 'var(--moss)' : 'var(--gold)'}">${c.pct >= 100 ? '✓' : c.pct + '%'}</span><span style="font-size:10px;color:var(--muted);cursor:pointer" onclick="delItem('cursos','${c.id}')">✕</span></div>`;
+    clist.appendChild(div);
+  });
+  if (allData.cursos.length === 0) clist.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhum curso adicionado ainda</div>';
+
+  const totalH = allData.cursos.reduce((a,c) => a + (c.hours_done || 0), 0);
+  document.getElementById('estudos-sub').textContent = `${totalH}h estudadas · ${allData.livros.length} livro(s) ativo(s)`;
+}
+
+// ============ STOIC ============
+function loadStoic() {
+  const stoics = [
+    { q:"Não procures que as coisas aconteçam como desejas, mas deseja que aconteçam como são.", a:"Epicteto · Enchiridion §8" },
+    { q:"Perde o tempo que se passa na antecipação do sofrimento quem acrescenta ao sofrimento a ele.", a:"Sêneca · Cartas a Lucílio" },
+    { q:"O obstáculo no caminho torna-se o caminho. No interior de cada obstáculo existe uma oportunidade.", a:"Marco Aurélio · Meditações" },
+    { q:"Você tem poder sobre sua mente, não sobre os eventos externos. Perceba isso e encontrará força.", a:"Marco Aurélio · Meditações IV" },
+    { q:"Não são as coisas que perturbam os homens, mas as opiniões sobre as coisas.", a:"Epicteto · Enchiridion §5" },
+    { q:"A filosofia não promete riqueza externa, nem prazer, nem glória — oferece serenidade, liberdade e calma.", a:"Epicteto · Discursos" },
+    { q:"Trata cada amanhecer como um presente e vive cada dia como se fosse o último e o primeiro.", a:"Marco Aurélio · Meditações VII" },
+  ];
+  const s = stoics[new Date().getDay()];
+  document.getElementById('stoic-q').textContent = s.q;
+  document.getElementById('stoic-a').textContent = '— ' + s.a;
+}
+
+// ============ INSIGHTS ============
+async function generateInsights() {
+  const list = document.getElementById('insights-list');
+  const insights = [];
+
+  const weekTreinos = allData.treinos.filter(t => sameWeek(t.date)).length;
+  if (weekTreinos < 3) insights.push({ type:'alerta', icon:'💪', title:'Treino', text:`Apenas ${weekTreinos} treino(s) esta semana. Sua meta é 4. Bloquear horário fixo na agenda ajuda na consistência.` });
+
+  const oldExames = allData.exames.filter(e => {
+    const m = Math.floor((Date.now() - new Date(e.exam_date).getTime()) / (1000*60*60*24*30));
+    return m >= 6;
+  });
+  if (oldExames.length > 0) insights.push({ type:'dark', icon:'🏥', title:'Checkup recomendado', text:`${oldExames.length} exame(s) com mais de 6 meses: ${oldExames.map(e=>e.name).join(', ')}. Agende um checkup completo — é o melhor investimento em saúde que você pode fazer.` });
+  else if (allData.exames.length === 0) insights.push({ type:'dark', icon:'🏥', title:'Registre seus exames', text:'Nenhum exame cadastrado. Faça um checkup completo e registre os resultados para que o agente possa monitorar sua saúde.' });
+
+  const livroAtivo = allData.livros.find(l => l.pct < 100);
+  if (livroAtivo) insights.push({ type:'info', icon:'📚', title:'Leitura', text:`"${livroAtivo.title}" está em ${livroAtivo.pct}%. Que tal definir uma meta de capítulo para hoje?` });
+
+  const todayTasks = allData.tasks.filter(t => t.date === todayStr()).length;
+  if (todayTasks === 0) insights.push({ type:'saude', icon:'📅', title:'Agenda vazia hoje', text:'Nenhuma tarefa para hoje ainda. Planeje seu dia para manter o foco.' });
+
+  list.innerHTML = insights.length === 0
+    ? '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Registre mais dados para receber insights personalizados</div>'
+    : insights.map(i => `<div class="icard ${i.type}"><div class="ict">${i.icon} ${i.title}</div><div class="itx">${i.text}</div></div>`).join('');
+}
+
+// ============ CHAT ============
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  appendBubble(msg, 'user');
+  chatHistory.push({ role:'user', parts:[{ text:msg }] });
+
+  const thinkDiv = appendBubble('', 'ai', true);
+
+  if (!GEMINI_KEY) {
+    thinkDiv.textContent = 'Configure a chave Gemini em ⚙ Configurações para usar o agente de IA.';
+    return;
+  }
+
+  const ctx = `Você é o Agente Kodex, assistente pessoal de saúde e produtividade. Dados do usuário:
+- Treinos esta semana: ${allData.treinos.filter(t=>sameWeek(t.date)).length}
+- Exames registrados: ${allData.exames.length > 0 ? allData.exames.map(e=>`${e.name}: ${e.value}`).join(', ') : 'nenhum'}
+- Avaliação mais recente: ${allData.avaliacoes[0] ? `${allData.avaliacoes[0].weight_kg}kg, ${allData.avaliacoes[0].body_fat}% gordura` : 'não registrada'}
+- Livros em leitura: ${allData.livros.filter(l=>l.pct<100).map(l=>l.title).join(', ') || 'nenhum'}
+- Cursos: ${allData.cursos.map(c=>`${c.title} (${c.pct}%)`).join(', ') || 'nenhum'}
+Responda em português, de forma direta e personalizada, máximo 3 parágrafos.`;
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ system_instruction:{parts:[{text:ctx}]}, contents:chatHistory })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Não consegui processar.';
+    thinkDiv.innerHTML = reply.replace(/\n/g,'<br>');
+    chatHistory.push({ role:'model', parts:[{text:reply}] });
+  } catch(e) {
+    thinkDiv.textContent = 'Erro: ' + e.message;
+  }
+  document.getElementById('scroll').scrollTop = 999999;
+}
+
+function appendBubble(text, type, thinking=false) {
+  const div = document.createElement('div');
+  div.className = 'bubble ' + type;
+  if (thinking) div.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
+  else div.textContent = text;
+  document.getElementById('chat-msgs').appendChild(div);
+  document.getElementById('scroll').scrollTop = 999999;
+  return div;
+}
+
+// ============ MODALS ============
+function openModal(id) {
+  const templates = {
+    'add-habit': `<div class="mtitle">Novo hábito</div>
+      <div class="fg"><label class="fl">Emoji</label><input class="fi" id="f-emoji" placeholder="💧" maxlength="2"></div>
+      <div class="fg"><label class="fl">Nome do hábito</label><input class="fi" id="f-name" placeholder="Ex: Hidratação (2L)"></div>
+      <button class="btnp" onclick="saveHabit()">Salvar hábito</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+
+    'add-treino': `<div class="mtitle">Registrar treino</div>
+      <div class="fg"><label class="fl">Grupo muscular</label><input class="fi" id="f-group" placeholder="Ex: Peito + Tríceps"></div>
+      <div class="fg"><label class="fl">Duração (min)</label><input class="fi" type="number" id="f-dur" placeholder="60"></div>
+      <div class="fg"><label class="fl">Exercícios</label><textarea class="fi" id="f-exer" placeholder="Supino 4x10, 80kg&#10;Desenvolvimento 3x12, 60kg"></textarea></div>
+      <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="f-date" value="${todayStr()}"></div>
+      <div class="fg"><label class="fl">Observações</label><input class="fi" id="f-notes" placeholder="Como foi o treino?"></div>
+      <button class="btnp" onclick="saveTreino()">Salvar</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+
+    'add-dieta': `<div class="mtitle">Registrar refeição</div>
+      <div class="fg"><label class="fl">Refeição</label><input class="fi" id="f-meal" placeholder="Café, Almoço, Jantar..."></div>
+      <div class="fg"><label class="fl">Descrição</label><textarea class="fi" id="f-desc" placeholder="Frango, arroz integral, salada..."></textarea></div>
+      <div class="fg"><label class="fl">Calorias (kcal)</label><input class="fi" type="number" id="f-kcal" placeholder="600"></div>
+      <div class="fg"><label class="fl">Proteína (g)</label><input class="fi" type="number" id="f-prot" placeholder="40"></div>
+      <div class="fg"><label class="fl">Água (L)</label><input class="fi" type="number" step="0.1" id="f-agua" placeholder="0.5"></div>
+      <button class="btnp" onclick="saveDieta()">Salvar</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+
+    'add-exame': `<div class="mtitle">Adicionar exame</div>
+      <div class="fg"><label class="fl">Nome do exame</label><input class="fi" id="f-name" placeholder="Ex: Colesterol LDL"></div>
+      <div class="fg"><label class="fl">Resultado</label><input class="fi" id="f-value" placeholder="Ex: 128 mg/dL"></div>
+      <div class="fg"><label class="fl">Data do exame</label><input class="fi" type="date" id="f-date" value="${todayStr()}"></div>
+      <div class="fg"><label class="fl">Status</label>
+        <select class="fi" id="f-status"><option value="ok">Normal ✓</option><option value="warn">Atenção ⚠️</option><option value="bad">Crítico ✕</option></select></div>
+      <div class="fg"><label class="fl">Valor de referência</label><input class="fi" id="f-ref" placeholder="Ex: até 130 mg/dL"></div>
+      <button class="btnp" onclick="saveExame()">Salvar</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+
+    'add-aval': `<div class="mtitle">Avaliação física</div>
+      <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="f-date" value="${todayStr()}"></div>
+      <div class="fg"><label class="fl">Peso (kg)</label><input class="fi" type="number" step="0.1" id="f-peso" placeholder="78.4"></div>
+      <div class="fg"><label class="fl">% Gordura</label><input class="fi" type="number" step="0.1" id="f-gord" placeholder="17.2"></div>
+      <div class="fg"><label class="fl">Altura (cm)</label><input class="fi" type="number" id="f-altura" placeholder="175"></div>
+      <div class="fg"><label class="fl">Observações</label><input class="fi" id="f-notes" placeholder="Academia, contexto..."></div>
+      <button class="btnp" onclick="saveAval()">Salvar</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+
+    'add-task': `<div class="mtitle">Nova tarefa</div>
+      <div class="fg"><label class="fl">Título</label><input class="fi" id="f-title" placeholder="O que precisa fazer?"></div>
+      <div class="fg"><label class="fl">Horário</label><input class="fi" type="time" id="f-time"></div>
+      <div class="fg"><label class="fl">Categoria</label>
+        <select class="fi" id="f-cat"><option>Trabalho</option><option>Saúde</option><option>Estudos</option><option>Pessoal</option></select></div>
+      <div class="fg"><label class="fl">Duração (min)</label><input class="fi" type="number" id="f-dur" placeholder="60"></div>
+      <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="f-date" value="${selectedDate}"></div>
+      <button class="btnp" onclick="saveTask()">Salvar</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+
+    'add-livro': `<div class="mtitle">Adicionar livro</div>
+      <div class="fg"><label class="fl">Título</label><input class="fi" id="f-title" placeholder="Nome do livro"></div>
+      <div class="fg"><label class="fl">Autor</label><input class="fi" id="f-author" placeholder="Nome do autor"></div>
+      <div class="fg"><label class="fl">% lido</label><input class="fi" type="number" min="0" max="100" id="f-pct" placeholder="0"></div>
+      <button class="btnp" onclick="saveLivro()">Salvar</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+
+    'add-curso': `<div class="mtitle">Adicionar curso</div>
+      <div class="fg"><label class="fl">Título</label><input class="fi" id="f-title" placeholder="Nome do curso"></div>
+      <div class="fg"><label class="fl">Plataforma</label><input class="fi" id="f-plat" placeholder="Ex: Udemy, Coursera..."></div>
+      <div class="fg"><label class="fl">% concluído</label><input class="fi" type="number" min="0" max="100" id="f-pct" placeholder="0"></div>
+      <div class="fg"><label class="fl">Horas estudadas</label><input class="fi" type="number" id="f-hours" placeholder="0"></div>
+      <button class="btnp" onclick="saveCurso()">Salvar</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+
+    'cfg-gemini': `<div class="mtitle">Chave Gemini API</div>
+      <div class="fg"><label class="fl">API Key</label><input class="fi" id="f-gkey" placeholder="AIza..." value="${GEMINI_KEY}" autocomplete="off" spellcheck="false"></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.5">Gratuita em aistudio.google.com → Get API key. Salva localmente no dispositivo.</div>
+      <button class="btnp" onclick="saveGeminiKey()">Salvar chave</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+  };
+  document.getElementById('modal-body').innerHTML = templates[id] || '<div class="mtitle">Em breve</div><button class="btnc" onclick="closeModal()">Fechar</button>';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ============ SAVE HANDLERS ============
+async function saveHabit() {
+  const name = document.getElementById('f-name').value.trim();
+  const emoji = document.getElementById('f-emoji').value.trim() || '✦';
+  if (!name) return toast('Preencha o nome');
+  const r = await dbInsert('habits', { name, emoji });
+  if (r) { allData.habits.push(r); closeModal(); renderHome(); toast('Hábito adicionado!'); }
+}
+
+async function saveTreino() {
+  const muscle_group = document.getElementById('f-group').value.trim();
+  if (!muscle_group) return toast('Informe o grupo muscular');
+  const r = await dbInsert('treinos', { muscle_group, duration_min: parseInt(document.getElementById('f-dur').value)||0, exercises: document.getElementById('f-exer').value, date: document.getElementById('f-date').value, notes: document.getElementById('f-notes').value });
+  if (r) { allData.treinos.unshift(r); closeModal(); renderTreinos(); renderHome(); toast('Treino salvo!'); }
+}
+
+async function saveDieta() {
+  const meal = document.getElementById('f-meal').value.trim();
+  if (!meal) return toast('Informe a refeição');
+  const r = await dbInsert('dieta', { meal, description: document.getElementById('f-desc').value, kcal: parseInt(document.getElementById('f-kcal').value)||0, protein_g: parseInt(document.getElementById('f-prot').value)||0, water_l: parseFloat(document.getElementById('f-agua').value)||0, date: todayStr() });
+  if (r) { allData.dieta.unshift(r); closeModal(); renderDieta(); toast('Refeição salva!'); }
+}
+
+async function saveExame() {
+  const name = document.getElementById('f-name').value.trim();
+  const value = document.getElementById('f-value').value.trim();
+  if (!name || !value) return toast('Preencha nome e resultado');
+  const r = await dbInsert('exames', { name, value, exam_date: document.getElementById('f-date').value, status: document.getElementById('f-status').value, reference: document.getElementById('f-ref').value });
+  if (r) { allData.exames.unshift(r); closeModal(); renderExames(); generateInsights(); toast('Exame salvo!'); }
+}
+
+async function saveAval() {
+  const r = await dbInsert('avaliacoes', { date: document.getElementById('f-date').value, weight_kg: parseFloat(document.getElementById('f-peso').value)||null, body_fat: parseFloat(document.getElementById('f-gord').value)||null, height_cm: parseInt(document.getElementById('f-altura').value)||null, notes: document.getElementById('f-notes').value });
+  if (r) { allData.avaliacoes.unshift(r); closeModal(); renderAval(); toast('Avaliação salva!'); }
+}
+
+async function saveTask() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) return toast('Informe o título');
+  const r = await dbInsert('tasks', { title, time: document.getElementById('f-time').value, category: document.getElementById('f-cat').value, duration_min: parseInt(document.getElementById('f-dur').value)||null, date: document.getElementById('f-date').value });
+  if (r) { allData.tasks.unshift(r); closeModal(); renderAgenda(); toast('Tarefa salva!'); }
+}
+
+async function saveLivro() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) return toast('Informe o título');
+  const r = await dbInsert('livros', { title, author: document.getElementById('f-author').value, pct: parseInt(document.getElementById('f-pct').value)||0 });
+  if (r) { allData.livros.unshift(r); closeModal(); renderEstudos(); toast('Livro adicionado!'); }
+}
+
+async function saveCurso() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) return toast('Informe o título');
+  const r = await dbInsert('cursos', { title, platform: document.getElementById('f-plat').value, pct: parseInt(document.getElementById('f-pct').value)||0, hours_done: parseInt(document.getElementById('f-hours').value)||0 });
+  if (r) { allData.cursos.unshift(r); closeModal(); renderEstudos(); toast('Curso adicionado!'); }
+}
+
+function saveGeminiKey() {
+  const key = document.getElementById('f-gkey').value.trim();
+  if (!key) return toast('Chave inválida');
+  GEMINI_KEY = key;
+  localStorage.setItem('kodex_gemini_' + USER.id, key);
+  closeModal(); updateGeminiStatus(); toast('Chave salva!');
+}
+
+function updateGeminiStatus() {
+  document.getElementById('cfg-gemini-status').textContent = GEMINI_KEY ? 'Configurada ✓' : 'Não configurada';
+}
+
+async function delItem(table, id) {
+  await dbDelete(table, id);
+  allData[table] = allData[table].filter(i => i.id !== id);
+  if (table === 'treinos') renderTreinos();
+  if (table === 'dieta') renderDieta();
+  if (table === 'exames') renderExames();
+  if (table === 'avaliacoes') renderAval();
+  if (table === 'tasks') renderAgenda();
+  if (table === 'livros' || table === 'cursos') renderEstudos();
+  if (table === 'habits') { renderHome(); }
+  toast('Removido');
+}
+
+// ============ UTILS ============
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function weekNum() { const n=new Date(); return Math.ceil(((n-new Date(n.getFullYear(),0,1))/86400000+1)/7); }
+function sameWeek(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr+'T12:00:00'), now = new Date();
+  const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay());
+  const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate() + 6);
+  return d >= startOfWeek && d <= endOfWeek;
+}
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr+'T12:00:00');
+  const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  return days[d.getDay()] + ' ' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+}
+function fmtDateLong(dateStr) {
+  if (!dateStr) return '';
+  const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const d = new Date(dateStr+'T12:00:00');
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+function updateTime() {
+  const n = new Date();
+  document.getElementById('stime').textContent = String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+  const h = n.getHours();
+  const greet = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  const el = document.getElementById('home-greeting');
+  if (el) el.textContent = greet;
+}
+function updateDateDisplay() {
+  const n = new Date();
+  const days = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const el = document.getElementById('home-date');
+  if (el) el.textContent = `${days[n.getDay()]}, ${n.getDate()} de ${months[n.getMonth()]}`;
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ============ PWA ============
+function setupPWA() {
+  const manifest = { name:'Kodex', short_name:'Kodex', start_url:'/', display:'standalone', background_color:'#1A1A1A', theme_color:'#1A1A1A', icons:[{src:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" fill="%231A1A1A" rx="40"/><text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-size="110" font-family="serif" fill="%23C9A84C">K</text></svg>',sizes:'192x192',type:'image/svg+xml'}] };
+  const blob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  const link = document.createElement('link'); link.rel='manifest'; link.href=URL.createObjectURL(blob);
+  document.head.appendChild(link);
+}
+</script>
+</body>
+</html>
