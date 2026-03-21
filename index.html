@@ -750,7 +750,7 @@ async function generateInsights() {
 // ============ CHAT ============
 async function loadChatHistory() {
   const { data } = await sb.from('chat_history')
-    .select('role, content')
+    .select('role, content, created_at')
     .eq('user_id', USER.id)
     .order('created_at', { ascending: true })
     .limit(80);
@@ -762,16 +762,44 @@ async function loadChatHistory() {
     msgs.innerHTML = '<div class="bubble ai">Olá! Sou o Agente Kodex com Claude Sonnet 4.5. Tenho acesso completo aos seus dados. O que você quer explorar?</div>';
     return;
   }
-  chatHistory.forEach(m => {
-    const div = document.createElement('div');
-    div.innerHTML = m.content.replace(/\n/g,'<br>');
-    msgs.appendChild(div);
+  data.forEach(m => {
+    renderBubble(m.role === 'user' ? 'user' : 'ai', m.content, m.created_at);
   });
   document.getElementById('scroll').scrollTop = 999999;
 }
 
 async function saveChatMessage(role, content) {
-  await sb.from('chat_history').insert({ user_id: USER.id, role, content });
+  const { data } = await sb.from('chat_history')
+    .insert({ user_id: USER.id, role, content })
+    .select('created_at')
+    .single();
+  return data?.created_at || new Date().toISOString();
+}
+
+function fmtTimestamp(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const time = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  if (isToday) return time;
+  const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+  return days[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1) + ' ' + time;
+}
+
+function renderBubble(type, content, timestamp) {
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:' + (type === 'user' ? 'flex-end' : 'flex-start') + ';gap:3px;margin-bottom:2px';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ' + type;
+  bubble.innerHTML = content.replace(/\n/g, '<br>');
+  const ts = document.createElement('div');
+  ts.style.cssText = 'font-size:10px;color:var(--dim);padding:0 4px;';
+  ts.textContent = fmtTimestamp(timestamp);
+  wrapper.appendChild(bubble);
+  wrapper.appendChild(ts);
+  document.getElementById('chat-msgs').appendChild(wrapper);
+  return bubble;
 }
 
 async function clearChatHistory() {
@@ -901,7 +929,10 @@ async function sendChat() {
     const data = await res.json();
     if (data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
     const reply = data.content?.[0]?.text || 'Não consegui processar.';
-    thinkDiv.innerHTML = reply.replace(/\n/g,'<br>');
+    // Replace thinking bubble with properly formatted response
+    const thinkParent = thinkDiv.parentNode;
+    if (thinkParent) thinkParent.remove();
+    renderBubble('ai', reply, new Date().toISOString());
     chatHistory.push({ role: 'assistant', content: reply });
     saveChatMessage('assistant', reply);
   } catch(e) {
@@ -911,13 +942,17 @@ async function sendChat() {
 }
 
 function appendBubble(text, type, thinking=false) {
-  const div = document.createElement('div');
-  div.className = 'bubble ' + type;
-  if (thinking) div.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
-  else div.textContent = text;
-  document.getElementById('chat-msgs').appendChild(div);
+  if (thinking) {
+    const div = document.createElement('div');
+    div.className = 'bubble ' + type;
+    div.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
+    document.getElementById('chat-msgs').appendChild(div);
+    document.getElementById('scroll').scrollTop = 999999;
+    return div;
+  }
+  const bubble = renderBubble(type, text, new Date().toISOString());
   document.getElementById('scroll').scrollTop = 999999;
-  return div;
+  return bubble;
 }
 
 // ============ MODALS ============
