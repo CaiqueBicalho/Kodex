@@ -180,8 +180,8 @@ textarea.fi{resize:vertical;min-height:80px}
       <input type="email" id="reg-email" class="auth-input" placeholder="seu@email.com">
       <label class="auth-label">Senha</label>
       <input type="password" id="reg-password" class="auth-input" placeholder="Mínimo 6 caracteres">
-      <label class="auth-label">Chave Gemini API</label>
-      <input type="text" id="reg-gemini" class="auth-input" placeholder="AIza... (gratuita em aistudio.google.com)" autocomplete="off" autocorrect="off" spellcheck="false">
+      <label class="auth-label">URL do Worker Cloudflare</label>
+      <input type="text" id="reg-worker" class="auth-input" placeholder="https://kodex-proxy.usuario.workers.dev" autocomplete="off" autocorrect="off" spellcheck="false">
       <div class="auth-msg" id="reg-msg"></div>
       <button class="auth-btn" onclick="doRegister()">Criar conta →</button>
       <button class="auth-link" onclick="toggleAuthMode()">← Já tenho conta</button>
@@ -328,8 +328,8 @@ textarea.fi{resize:vertical;min-height:80px}
       <div class="srow"><div><div class="stitle">Email</div><div class="sdesc" id="cfg-email">—</div></div></div>
       <div class="srow"><div><div class="stitle">Sincronização</div><div class="sdesc">Supabase · dados na nuvem</div></div><span class="stag">Ativo</span></div>
       <div class="sl">Integração IA</div>
-      <div class="srow" onclick="openModal('cfg-gemini')" style="cursor:pointer">
-        <div><div class="stitle">Chave Gemini API</div><div class="sdesc" id="cfg-gemini-status">—</div></div>
+      <div class="srow" onclick="openModal('cfg-worker')" style="cursor:pointer">
+        <div><div class="stitle">Worker Cloudflare (Claude)</div><div class="sdesc" id="cfg-worker-status">—</div></div>
         <span style="color:var(--muted);font-size:18px">›</span>
       </div>
       <div class="sl">Dados</div>
@@ -368,7 +368,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
 let USER = null;
-let GEMINI_KEY = '';
+let WORKER_URL = '';
 let chatHistory = [];
 let selectedDate = todayStr();
 let allData = { treinos:[], dieta:[], exames:[], avaliacoes:[], tasks:[], livros:[], cursos:[], habits:[] };
@@ -396,11 +396,11 @@ async function startApp() {
   document.getElementById('app').style.display = 'flex';
   document.getElementById('cfg-email').textContent = USER.email;
 
-  // Load gemini key from user metadata or localStorage
-  GEMINI_KEY = USER.user_metadata?.gemini_key || localStorage.getItem('kodex_gemini_' + USER.id) || '';
-  updateGeminiStatus();
+  WORKER_URL = localStorage.getItem('kodex_worker_' + USER.id) || '';
+  updateWorkerStatus();
 
   await loadAllData();
+  await loadChatHistory();
   renderHome();
   renderAgenda();
   loadStoic();
@@ -432,10 +432,11 @@ async function doRegister() {
   const gemini = document.getElementById('reg-gemini').value.trim();
   const msg = document.getElementById('reg-msg');
   msg.textContent = 'Criando conta...'; msg.className = 'auth-msg';
-  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { gemini_key: gemini } } });
+  const worker = document.getElementById('reg-worker').value.trim();
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
   if (error) { msg.textContent = error.message; msg.className = 'auth-msg err'; }
   else {
-    if (gemini) localStorage.setItem('kodex_gemini_' + data.user?.id, gemini);
+    if (worker && data.user) localStorage.setItem('kodex_worker_' + data.user.id, worker);
     msg.textContent = 'Conta criada! Verifique seu email se necessário.'; msg.className = 'auth-msg ok';
     setTimeout(() => toggleAuthMode(), 1500);
   }
@@ -628,15 +629,15 @@ function renderAval() {
   list.innerHTML = '';
   const latest = allData.avaliacoes[0];
   if (latest) {
-    document.getElementById('m-peso').textContent = latest.weight_kg || '—';
-    document.getElementById('m-gord').textContent = latest.body_fat ? latest.body_fat + '%' : '—';
-    const imc = latest.weight_kg && latest.height_cm ? (latest.weight_kg / Math.pow(latest.height_cm/100, 2)).toFixed(1) : '—';
+    document.getElementById('m-peso').textContent = latest.weight_kg || '--';
+    document.getElementById('m-gord').textContent = latest.body_fat ? latest.body_fat + '%' : '--';
+    const imc = latest.weight_kg && latest.height_cm ? (latest.weight_kg / Math.pow(latest.height_cm/100, 2)).toFixed(1) : '--';
     document.getElementById('m-imc').textContent = imc;
   }
   allData.avaliacoes.forEach(a => {
     const div = document.createElement('div');
     div.className = 'card';
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:500">${fmtDateLong(a.date)}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${a.weight_kg || '—'}kg · ${a.body_fat || '—'}% gord. · ${a.notes || ''}</div></div><span style="font-size:10px;color:var(--muted);cursor:pointer" onclick="delItem('avaliacoes','${a.id}')">✕</span></div>`;
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:500">${fmtDateLong(a.date)}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${a.weight_kg || '--'}kg · ${a.body_fat || '--'}% gord. · ${a.notes || ''}</div></div><span style="font-size:10px;color:var(--muted);cursor:pointer" onclick="delItem('avaliacoes','${a.id}')">✕</span></div>`;
     list.appendChild(div);
   });
   if (allData.avaliacoes.length === 0) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhuma avaliação registrada ainda</div>';
@@ -669,7 +670,7 @@ function renderAgenda() {
   dayTasks.forEach(t => {
     const div = document.createElement('div');
     div.className = 'ti';
-    div.innerHTML = `<span class="tt">${t.time || '—'}</span><span class="tdot" style="background:${colors[t.category]||'var(--muted)'}"></span><div><div class="tn">${t.title}</div><div class="ts2">${t.category || ''}${t.duration_min ? ' · ' + t.duration_min + ' min' : ''}</div></div><span style="font-size:10px;color:var(--muted);cursor:pointer;margin-left:auto;padding-left:8px" onclick="delItem('tasks','${t.id}')">✕</span>`;
+    div.innerHTML = `<span class="tt">${t.time || '--'}</span><span class="tdot" style="background:${colors[t.category]||'var(--muted)'}"></span><div><div class="tn">${t.title}</div><div class="ts2">${t.category || ''}${t.duration_min ? ' · ' + t.duration_min + ' min' : ''}</div></div><span style="font-size:10px;color:var(--muted);cursor:pointer;margin-left:auto;padding-left:8px" onclick="delItem('tasks','${t.id}')">✕</span>`;
     list.appendChild(div);
   });
   if (dayTasks.length === 0) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhuma tarefa para este dia</div>';
@@ -712,12 +713,12 @@ function loadStoic() {
     { q:"O obstáculo no caminho torna-se o caminho. No interior de cada obstáculo existe uma oportunidade.", a:"Marco Aurélio · Meditações" },
     { q:"Você tem poder sobre sua mente, não sobre os eventos externos. Perceba isso e encontrará força.", a:"Marco Aurélio · Meditações IV" },
     { q:"Não são as coisas que perturbam os homens, mas as opiniões sobre as coisas.", a:"Epicteto · Enchiridion §5" },
-    { q:"A filosofia não promete riqueza externa, nem prazer, nem glória — oferece serenidade, liberdade e calma.", a:"Epicteto · Discursos" },
+    { q:"A filosofia não promete riqueza externa, nem prazer, nem glória -- oferece serenidade, liberdade e calma.", a:"Epicteto · Discursos" },
     { q:"Trata cada amanhecer como um presente e vive cada dia como se fosse o último e o primeiro.", a:"Marco Aurélio · Meditações VII" },
   ];
   const s = stoics[new Date().getDay()];
   document.getElementById('stoic-q').textContent = s.q;
-  document.getElementById('stoic-a').textContent = '— ' + s.a;
+  document.getElementById('stoic-a').textContent = '-- ' + s.a;
 }
 
 // ============ INSIGHTS ============
@@ -732,7 +733,7 @@ async function generateInsights() {
     const m = Math.floor((Date.now() - new Date(e.exam_date).getTime()) / (1000*60*60*24*30));
     return m >= 6;
   });
-  if (oldExames.length > 0) insights.push({ type:'dark', icon:'🏥', title:'Checkup recomendado', text:`${oldExames.length} exame(s) com mais de 6 meses: ${oldExames.map(e=>e.name).join(', ')}. Agende um checkup completo — é o melhor investimento em saúde que você pode fazer.` });
+  if (oldExames.length > 0) insights.push({ type:'dark', icon:'🏥', title:'Checkup recomendado', text:`${oldExames.length} exame(s) com mais de 6 meses: ${oldExames.map(e=>e.name).join(', ')}. Agende um checkup completo -- é o melhor investimento em saúde que você pode fazer.` });
   else if (allData.exames.length === 0) insights.push({ type:'dark', icon:'🏥', title:'Registre seus exames', text:'Nenhum exame cadastrado. Faça um checkup completo e registre os resultados para que o agente possa monitorar sua saúde.' });
 
   const livroAtivo = allData.livros.find(l => l.pct < 100);
@@ -747,39 +748,162 @@ async function generateInsights() {
 }
 
 // ============ CHAT ============
+async function loadChatHistory() {
+  const { data } = await sb.from('chat_history')
+    .select('role, content')
+    .eq('user_id', USER.id)
+    .order('created_at', { ascending: true })
+    .limit(80);
+  if (!data) return;
+  chatHistory = data.map(r => ({ role: r.role, content: r.content }));
+  const msgs = document.getElementById('chat-msgs');
+  msgs.innerHTML = '';
+  if (chatHistory.length === 0) {
+    msgs.innerHTML = '<div class="bubble ai">Olá! Sou o Agente Kodex com Claude Sonnet 4.5. Tenho acesso completo aos seus dados. O que você quer explorar?</div>';
+    return;
+  }
+  chatHistory.forEach(m => {
+    const div = document.createElement('div');
+    div.innerHTML = m.content.replace(/\n/g,'<br>');
+    msgs.appendChild(div);
+  });
+  document.getElementById('scroll').scrollTop = 999999;
+}
+
+async function saveChatMessage(role, content) {
+  await sb.from('chat_history').insert({ user_id: USER.id, role, content });
+}
+
+async function clearChatHistory() {
+  await sb.from('chat_history').delete().eq('user_id', USER.id);
+  chatHistory = [];
+  document.getElementById('chat-msgs').innerHTML = '<div class="bubble ai">Histórico apagado. Como posso ajudar?</div>';
+  toast('Histórico apagado');
+}
+
+function buildFullContext() {
+  const treinos = allData.treinos;
+  const exames = allData.exames;
+  const avaliacoes = allData.avaliacoes;
+  const dieta = allData.dieta;
+  const tasks = allData.tasks;
+  const livros = allData.livros;
+  const cursos = allData.cursos;
+  const habits = allData.habits;
+
+  const treinosPorGrupo = {};
+  treinos.forEach(t => {
+    if (!treinosPorGrupo[t.muscle_group]) treinosPorGrupo[t.muscle_group] = [];
+    treinosPorGrupo[t.muscle_group].push(t);
+  });
+
+  const totalKcalHoje = dieta.filter(d=>d.date===todayStr()).reduce((a,d)=>a+(d.kcal||0),0);
+  const totalProtHoje = dieta.filter(d=>d.date===todayStr()).reduce((a,d)=>a+(d.protein_g||0),0);
+  const treinosSemana = treinos.filter(t=>sameWeek(t.date)).length;
+  const avalLatest = avaliacoes[0];
+  const imc = avalLatest && avalLatest.weight_kg && avalLatest.height_cm
+    ? (avalLatest.weight_kg / Math.pow(avalLatest.height_cm/100,2)).toFixed(1) : null;
+
+  return `Você é o Agente Kodex -- conselheiro pessoal de elite que integra medicina, nutrição, ciências do esporte e filosofia clássica/estoicismo. Parceiro intelectual rigoroso, direto e cuidadoso.
+
+IDENTIDADE E TOM
+Fale como um amigo que é simultaneamente médico, nutricionista, personal trainer e filósofo. Direto, sem rodeios. Trate como adulto inteligente. Mencione riscos reais quando existirem, sem transformar cada resposta em disclaimer jurídico.
+
+MEDICINA E SAÚDE GERAL
+Domina fisiologia humana, bioquímica, endocrinologia, cardiologia preventiva. Interpreta exames em conjunto -- não valores isolados. Biomarcadores: PCR-us, homocisteína, insulina de jejum, cortisol, testosterona livre vs total, vitaminas lipossolúveis. Diretrizes SBC, ADA, WHO + medicina funcional e de precisão. Monitora tendências ao longo do tempo.
+
+NUTRIÇÃO
+Protocolos: mediterrânea, low-carb, cetogênica, jejum intermitente, carb cycling. Calcula TDEE real, distribui macros por objetivo. Hipertrofia: 1.6-2.2g proteína/kg, superávit 200-400kcal. Cutting: déficit 300-500kcal mantendo proteína alta. Suplementação: creatina 3-5g/dia, vitamina D 2000-4000UI, ômega-3 2-4g EPA+DHA, magnésio 300-400mg.
+
+CIÊNCIAS DO ESPORTE
+Princípios: sobrecarga progressiva, especificidade, variação, recuperação. Hipertrofia: 10-20 séries semanais/grupo, 60-80% 1RM, 2x/semana. Força: 80-95% 1RM, baixo volume. Programas: PPL, Upper/Lower, Full Body, ABC, conjugado. Deloads a cada 4-8 semanas.
+
+FILOSOFIA CLÁSSICA E ESTOICISMO
+Sócrates: Maiêutica -- conhecimento nasce de perguntas. Epimeleia heautou -- cuidado da alma precede o do corpo.
+Platão: Tripartição da alma (razão, thumos, apetite). A caverna: questione ilusões. Hierarquia de Bem, Belo e Verdadeiro.
+Aristóteles: Eudaimonia como florescimento. Doutrina do meio-termo. "Somos o que repetidamente fazemos." Phronesis como virtude máxima.
+Epicteto: Dicotomia do controle. "Não são as coisas que perturbam, mas as opiniões sobre as coisas." Liberdade interior.
+Sêneca: "Dum differtur vita transcurrit." A morte como conselheira. Distinguir necessário do supérfluo.
+Marco Aurélio: Amor fati. "O obstáculo é o caminho." Memento mori. Autoexame noturno como prática.
+
+FORMATO
+Português brasileiro fluente. Conversacional para reflexões, estruturado para planos. Preciso com números. Cite obras filosóficas corretamente. Resposta personalizada sempre supera genérica.
+
+════════════════════════════════════════
+DADOS COMPLETOS DO USUÁRIO
+Data atual: ${new Date().toLocaleDateString('pt-BR', {weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+════════════════════════════════════════
+
+▸ AVALIAÇÃO FÍSICA MAIS RECENTE (${avalLatest ? fmtDateLong(avalLatest.date) : 'não registrada'})
+${avalLatest ? 'Peso: ' + avalLatest.weight_kg + 'kg | Gordura: ' + avalLatest.body_fat + '% | Altura: ' + avalLatest.height_cm + 'cm | IMC: ' + imc + ' | Notas: ' + (avalLatest.notes||'--') : 'Nenhuma avaliação registrada.'}
+
+▸ HISTÓRICO DE AVALIAÇÕES (${avaliacoes.length} registros)
+${avaliacoes.slice(0,12).map(a=>fmtDateLong(a.date)+': '+a.weight_kg+'kg, '+a.body_fat+'% gordura').join(' | ') || 'Nenhum'}
+
+▸ EXAMES LABORATORIAIS (${exames.length} resultados)
+${exames.map(e=>e.name+': '+e.value+' | '+(e.status==='ok'?'Normal':e.status==='warn'?'Atenção':'Crítico')+' | '+fmtDateLong(e.exam_date)+(e.reference?' | Ref: '+e.reference:'')).join(' | ') || 'Nenhum exame registrado.'}
+
+▸ TREINOS ESTA SEMANA: ${treinosSemana}/4 (meta semanal)
+${treinos.filter(t=>sameWeek(t.date)).map(t=>fmtDate(t.date)+': '+t.muscle_group+' | '+t.duration_min+'min | '+(t.exercises||'--')).join(' | ') || 'Nenhum treino esta semana.'}
+
+▸ HISTÓRICO DE TREINOS (últimos 40)
+${treinos.slice(0,40).map(t=>fmtDate(t.date)+': '+t.muscle_group+' ('+t.duration_min+'min)').join(' | ') || 'Nenhum'}
+
+▸ FREQUÊNCIA POR GRUPO MUSCULAR (total)
+${Object.entries(treinosPorGrupo).map(([g,arr])=>g+': '+arr.length+'x').join(' | ') || 'Nenhum dado'}
+
+▸ DIETA DE HOJE -- ${totalKcalHoje}kcal | ${totalProtHoje}g proteína
+${dieta.filter(d=>d.date===todayStr()).map(d=>d.meal+': '+(d.description||'')+' | '+d.kcal+'kcal | '+d.protein_g+'g prot | '+d.water_l+'L água').join(' | ') || 'Nenhuma refeição registrada hoje.'}
+
+▸ DIETA -- ÚLTIMOS 7 DIAS
+${dieta.filter(d=>{ const dd=new Date(d.date+'T12:00:00'); return (new Date()-dd)<7*86400000; }).map(d=>fmtDate(d.date)+' '+d.meal+': '+d.kcal+'kcal').join(' | ') || 'Nenhum dado'}
+
+▸ AGENDA DE HOJE
+${tasks.filter(t=>t.date===todayStr()).sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(t=>(t.time||'--:--')+' '+t.title+' ('+t.category+(t.duration_min?' '+t.duration_min+'min':'')+')').join(' | ') || 'Nenhuma tarefa hoje.'}
+
+▸ HÁBITOS CADASTRADOS (${habits.length})
+${habits.map(h=>(h.emoji||'•')+' '+h.name).join(' | ') || 'Nenhum hábito cadastrado.'}
+
+▸ LEITURAS ATIVAS
+${livros.filter(l=>l.pct<100).map(l=>'"'+l.title+'" de '+l.author+' -- '+l.pct+'%').join(' | ') || 'Nenhuma.'}
+
+▸ LEITURAS CONCLUÍDAS
+${livros.filter(l=>l.pct>=100).map(l=>'"'+l.title+'" de '+l.author).join(' | ') || 'Nenhuma'}
+
+▸ CURSOS E FORMAÇÕES
+${cursos.map(c=>c.title+' ('+(c.platform||'--')+') -- '+c.pct+'% | '+c.hours_done+'h').join(' | ') || 'Nenhum.'}
+════════════════════════════════════════`;
+}
+
 async function sendChat() {
   const input = document.getElementById('chat-input');
   const msg = input.value.trim();
   if (!msg) return;
   input.value = '';
   appendBubble(msg, 'user');
-  chatHistory.push({ role:'user', parts:[{ text:msg }] });
 
   const thinkDiv = appendBubble('', 'ai', true);
 
-  if (!GEMINI_KEY) {
-    thinkDiv.textContent = 'Configure a chave Gemini em ⚙ Configurações para usar o agente de IA.';
+  if (!WORKER_URL) {
+    thinkDiv.textContent = 'Configure a URL do Worker Cloudflare em ⚙ Configurações para usar o agente IA.';
     return;
   }
 
-  const ctx = `Você é o Agente Kodex, assistente pessoal de saúde e produtividade. Dados do usuário:
-- Treinos esta semana: ${allData.treinos.filter(t=>sameWeek(t.date)).length}
-- Exames registrados: ${allData.exames.length > 0 ? allData.exames.map(e=>`${e.name}: ${e.value}`).join(', ') : 'nenhum'}
-- Avaliação mais recente: ${allData.avaliacoes[0] ? `${allData.avaliacoes[0].weight_kg}kg, ${allData.avaliacoes[0].body_fat}% gordura` : 'não registrada'}
-- Livros em leitura: ${allData.livros.filter(l=>l.pct<100).map(l=>l.title).join(', ') || 'nenhum'}
-- Cursos: ${allData.cursos.map(c=>`${c.title} (${c.pct}%)`).join(', ') || 'nenhum'}
-Responda em português, de forma direta e personalizada, máximo 3 parágrafos.`;
+  chatHistory.push({ role: 'user', content: msg });
+  saveChatMessage('user', msg);
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ system_instruction:{parts:[{text:ctx}]}, contents:chatHistory })
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: buildFullContext(), messages: chatHistory })
     });
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Não consegui processar.';
+    if (data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+    const reply = data.content?.[0]?.text || 'Não consegui processar.';
     thinkDiv.innerHTML = reply.replace(/\n/g,'<br>');
-    chatHistory.push({ role:'model', parts:[{text:reply}] });
+    chatHistory.push({ role: 'assistant', content: reply });
+    saveChatMessage('assistant', reply);
   } catch(e) {
     thinkDiv.textContent = 'Erro: ' + e.message;
   }
@@ -859,10 +983,10 @@ function openModal(id) {
       <div class="fg"><label class="fl">Horas estudadas</label><input class="fi" type="number" id="f-hours" placeholder="0"></div>
       <button class="btnp" onclick="saveCurso()">Salvar</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
 
-    'cfg-gemini': `<div class="mtitle">Chave Gemini API</div>
-      <div class="fg"><label class="fl">API Key</label><input class="fi" id="f-gkey" placeholder="AIza..." value="${GEMINI_KEY}" autocomplete="off" spellcheck="false"></div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.5">Gratuita em aistudio.google.com → Get API key. Salva localmente no dispositivo.</div>
-      <button class="btnp" onclick="saveGeminiKey()">Salvar chave</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
+    'cfg-worker': `<div class="mtitle">Worker Cloudflare</div>
+      <div class="fg"><label class="fl">URL do Worker</label><input class="fi" id="f-wurl" placeholder="https://kodex-proxy.usuario.workers.dev" value="${WORKER_URL}" autocomplete="off" spellcheck="false"></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.5">URL do seu Cloudflare Worker que faz proxy para o Claude Sonnet. Salva localmente no dispositivo.</div>
+      <button class="btnp" onclick="saveWorkerUrl()">Salvar URL</button><button class="btnc" onclick="closeModal()">Cancelar</button>`,
   };
   document.getElementById('modal-body').innerHTML = templates[id] || '<div class="mtitle">Em breve</div><button class="btnc" onclick="closeModal()">Fechar</button>';
   document.getElementById('modal-overlay').classList.add('open');
@@ -930,16 +1054,17 @@ async function saveCurso() {
   if (r) { allData.cursos.unshift(r); closeModal(); renderEstudos(); toast('Curso adicionado!'); }
 }
 
-function saveGeminiKey() {
-  const key = document.getElementById('f-gkey').value.trim();
-  if (!key) return toast('Chave inválida');
-  GEMINI_KEY = key;
-  localStorage.setItem('kodex_gemini_' + USER.id, key);
-  closeModal(); updateGeminiStatus(); toast('Chave salva!');
+function saveWorkerUrl() {
+  const url = document.getElementById('f-wurl').value.trim();
+  if (!url) return toast('URL inválida');
+  WORKER_URL = url;
+  localStorage.setItem('kodex_worker_' + USER.id, url);
+  closeModal(); updateWorkerStatus(); toast('Worker salvo!');
 }
 
-function updateGeminiStatus() {
-  document.getElementById('cfg-gemini-status').textContent = GEMINI_KEY ? 'Configurada ✓' : 'Não configurada';
+function updateWorkerStatus() {
+  const el = document.getElementById('cfg-worker-status');
+  if (el) el.textContent = WORKER_URL ? 'Configurado ✓ -- Claude Sonnet 4.5' : 'Não configurado';
 }
 
 async function delItem(table, id) {
